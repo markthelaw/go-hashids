@@ -134,13 +134,6 @@ func (h *HashID) Encode(numbers []int64) (string, error) {
 	return h.EncodeInt64(numbers)
 }
 
-// Encode hashes an int to a string containing at least MinLength characters taken from the Alphabet.
-// Use Decode using the same Alphabet and Salt to get back the int.
-func (h *HashID) EncodeOne(number int) (string, error){
-	var number64 int64 
-	number64 = int64(number)
-	return h.EncodeInt64One(number64)
-}
 
 // EncodeInt64 hashes an array of int64 to a string containing at least MinLength characters taken from the Alphabet.
 // Use DecodeInt64 using the same Alphabet and Salt to get back the array of int64.
@@ -201,60 +194,6 @@ func (h *HashID) EncodeInt64(numbers []int64) (string, error) {
 	return string(result), nil
 }
 
-// EncodeInt64 hashes an array of int64 to a string containing at least MinLength characters taken from the Alphabet.
-// Use DecodeInt64 using the same Alphabet and Salt to get back the array of int64.
-func (h *HashID) EncodeInt64One(number int64) (string, error) {
-
-
-	if number < 0 {
-		return "", errors.New("negative number not supported")
-	}
-
-	alphabet := make([]rune, len(h.alphabet))
-	copy(alphabet, h.alphabet)
-
-	numberHash := int64(0)
-
-	numberHash += (number % int64(100))
-
-	result := make([]rune, 0, h.minLength)
-	lottery := alphabet[numberHash%int64(len(alphabet))]
-	result = append(result, lottery)
-
-//	for i, n := range numbers {
-		buffer := append([]rune{lottery}, append(h.salt, alphabet...)...)
-		alphabet = consistentShuffle(alphabet, buffer[:len(alphabet)])
-		hash := hash(number, alphabet)
-		result = append(result, hash...)
-
-//		if i+1 < len(numbers) {
-//			n %= int64(hash[0]) + int64(i)
-//			result = append(result, h.seps[n%int64(len(h.seps))])
-//		}
-//	}
-
-	if len(result) < h.minLength {
-		guardIndex := (numberHash + int64(result[0])) % int64(len(h.guards))
-		result = append([]rune{h.guards[guardIndex]}, result...)
-
-		if len(result) < h.minLength {
-			guardIndex = (numberHash + int64(result[2])) % int64(len(h.guards))
-			result = append(result, h.guards[guardIndex])
-		}
-	}
-
-	halfLength := len(alphabet) / 2
-	for len(result) < h.minLength {
-		alphabet = consistentShuffle(alphabet, alphabet)
-		result = append(alphabet[halfLength:], append(result, alphabet[:halfLength]...)...)
-		excess := len(result) - h.minLength
-		if excess > 0 {
-			result = result[excess/2 : excess/2+h.minLength]
-		}
-	}
-
-	return string(result), nil
-}
 
 // Decode unhashes the string passed to an array of int.
 // It is symmetric with Encode if the Alphabet and Salt are the same ones which were used to hash.
